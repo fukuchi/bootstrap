@@ -69,6 +69,7 @@ const KEY_TO_DIRECTION = {
 
 const Default = {
   interval: 5000,
+  intervalOffset: null,
   keyboard: true,
   pause: 'hover',
   ride: false,
@@ -78,6 +79,7 @@ const Default = {
 
 const DefaultType = {
   interval: '(number|boolean)', // TODO:v6 remove boolean support
+  intervalOffset: '(number|null)',
   keyboard: 'boolean',
   pause: '(string|boolean)',
   ride: '(boolean|string)',
@@ -98,12 +100,13 @@ class Carousel extends BaseComponent {
     this._isSliding = false
     this.touchTimeout = null
     this._swipeHelper = null
+    this._isHovered = false
 
     this._indicatorsElement = SelectorEngine.findOne(SELECTOR_INDICATORS, this._element)
     this._addEventListeners()
 
     if (this._config.ride === CLASS_NAME_CAROUSEL) {
-      this.cycle()
+      this.cycle(true)
     }
   }
 
@@ -130,6 +133,11 @@ class Carousel extends BaseComponent {
     // Don't call next when the page isn't visible
     // or the carousel or its parent isn't visible
     if (!document.hidden && isVisible(this._element)) {
+      // Skip slide if hovered and pause is set to 'hover'
+      if (this._config.pause === 'hover' && this._isHovered) {
+        return
+      }
+
       this.next()
     }
   }
@@ -146,11 +154,16 @@ class Carousel extends BaseComponent {
     this._clearInterval()
   }
 
-  cycle() {
+  cycle(useOffset = false) {
     this._clearInterval()
     this._updateInterval()
 
-    this._interval = setInterval(() => this.nextWhenVisible(), this._config.interval)
+    let intervalTime = this._config.interval
+    if (useOffset && this._config.intervalOffset !== null) {
+      intervalTime = this._config.intervalOffset
+    }
+
+    this._interval = setInterval(() => this.nextWhenVisible(), intervalTime)
   }
 
   _maybeEnableCycle() {
@@ -207,8 +220,12 @@ class Carousel extends BaseComponent {
     }
 
     if (this._config.pause === 'hover') {
-      EventHandler.on(this._element, EVENT_MOUSEENTER, () => this.pause())
-      EventHandler.on(this._element, EVENT_MOUSELEAVE, () => this._maybeEnableCycle())
+      EventHandler.on(this._element, EVENT_MOUSEENTER, () => {
+        this._isHovered = true
+      })
+      EventHandler.on(this._element, EVENT_MOUSELEAVE, () => {
+        this._isHovered = false
+      })
     }
 
     if (this._config.touch && Swipe.isSupported()) {
