@@ -1393,13 +1393,12 @@
       }
       const images = SelectorEngine.find('img[loading="lazy"]', carouselItem);
       for (const img of images) {
-        // Force the browser to start loading the image by accessing the src property
-        // This triggers the lazy load mechanism
+        // Skip images that are already loaded
         if (img.complete) {
           continue;
         }
 
-        // Clone the src to force a load check
+        // Reassign src to trigger lazy loading
         const src = img.getAttribute('src');
         if (src) {
           img.src = src;
