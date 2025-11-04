@@ -377,12 +377,38 @@ class Carousel extends BaseComponent {
       this._isSliding = false
 
       triggerEvent(EVENT_SLID)
+
+      // Preload lazy images in the next slide
+      const upcomingElement = getNextActiveElement(this._getItems(), nextElement, isNext, this._config.wrap)
+      this._preloadLazyImage(upcomingElement)
     }
 
     this._queueCallback(completeCallBack, activeElement, this._isAnimated())
 
     if (isCycling) {
       this.cycle()
+    }
+  }
+
+  _preloadLazyImage(carouselItem) {
+    if (!carouselItem) {
+      return
+    }
+
+    const images = SelectorEngine.find('img[loading="lazy"]', carouselItem)
+
+    for (const img of images) {
+      // Force the browser to start loading the image by accessing the src property
+      // This triggers the lazy load mechanism
+      if (img.complete) {
+        continue
+      }
+
+      // Clone the src to force a load check
+      const src = img.getAttribute('src')
+      if (src) {
+        img.src = src
+      }
     }
   }
 

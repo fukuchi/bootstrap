@@ -906,6 +906,50 @@ describe('Carousel', () => {
       expect(prevSpy).toHaveBeenCalled()
       expect(spyEnable).toHaveBeenCalled()
     })
+
+    it('should have a _preloadLazyImage method', () => {
+      fixtureEl.innerHTML = '<div class="carousel"></div>'
+
+      const carouselEl = fixtureEl.querySelector('.carousel')
+      const carousel = new Carousel(carouselEl)
+
+      expect(typeof carousel._preloadLazyImage).toEqual('function')
+    })
+
+    it('should preload lazy images in the next slide after slide completes', () => {
+      return new Promise(resolve => {
+        fixtureEl.innerHTML = [
+          '<div id="myCarousel" class="carousel slide">',
+          '  <div class="carousel-inner">',
+          '    <div class="carousel-item active">',
+          '      <img src="image1.jpg" alt="First slide">',
+          '    </div>',
+          '    <div class="carousel-item">',
+          '      <img src="image2.jpg" alt="Second slide">',
+          '    </div>',
+          '    <div id="thirdItem" class="carousel-item">',
+          '      <img id="lazyImage" src="image3.jpg" loading="lazy" alt="Third slide">',
+          '    </div>',
+          '  </div>',
+          '</div>'
+        ].join('')
+
+        const carouselEl = fixtureEl.querySelector('#myCarousel')
+        const spy = spyOn(Carousel.prototype, '_preloadLazyImage')
+        const carousel = new Carousel(carouselEl)
+
+        carouselEl.addEventListener('slid.bs.carousel', () => {
+          // Use setTimeout to allow the rest of the callback to complete
+          setTimeout(() => {
+            expect(spy).toHaveBeenCalled()
+            expect(spy).toHaveBeenCalledWith(fixtureEl.querySelector('#thirdItem'))
+            resolve()
+          }, 10)
+        })
+
+        carousel.next()
+      })
+    })
   })
 
   describe('nextWhenVisible', () => {
