@@ -322,6 +322,7 @@ class Carousel extends BaseComponent {
     const activeElement = this._getActive()
     const isNext = order === ORDER_NEXT
     const nextElement = element || getNextActiveElement(this._getItems(), activeElement, isNext, this._config.wrap)
+	const nextNextElement = element || getNextActiveElement(this._getItems(), nextElement, isNext, this._config.wrap)
 
     if (nextElement === activeElement) {
       return
@@ -334,7 +335,8 @@ class Carousel extends BaseComponent {
         relatedTarget: nextElement,
         direction: this._orderToDirection(order),
         from: this._getItemIndex(activeElement),
-        to: nextElementIndex
+        to: nextElementIndex,
+		nextNextTarget: nextNextElement
       })
     }
 
