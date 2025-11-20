@@ -1131,6 +1131,7 @@
   };
   const Default$b = {
     interval: 5000,
+    intervalOffset: null,
     keyboard: true,
     pause: 'hover',
     ride: false,
@@ -1140,6 +1141,7 @@
   const DefaultType$b = {
     interval: '(number|boolean)',
     // TODO:v6 remove boolean support
+    intervalOffset: '(number|null)',
     keyboard: 'boolean',
     pause: '(string|boolean)',
     ride: '(boolean|string)',
@@ -1159,10 +1161,11 @@
       this._isSliding = false;
       this.touchTimeout = null;
       this._swipeHelper = null;
+      this._isHovered = false;
       this._indicatorsElement = SelectorEngine.findOne(SELECTOR_INDICATORS, this._element);
       this._addEventListeners();
       if (this._config.ride === CLASS_NAME_CAROUSEL) {
-        this.cycle();
+        this.cycle(true);
       }
     }
 
@@ -1186,6 +1189,10 @@
       // Don't call next when the page isn't visible
       // or the carousel or its parent isn't visible
       if (!document.hidden && isVisible(this._element)) {
+        // Skip slide if hovered and pause is set to 'hover'
+        if (this._config.pause === 'hover' && this._isHovered) {
+          return;
+        }
         this.next();
       }
     }
@@ -1198,10 +1205,14 @@
       }
       this._clearInterval();
     }
-    cycle() {
+    cycle(useOffset = false) {
       this._clearInterval();
       this._updateInterval();
-      this._interval = setInterval(() => this.nextWhenVisible(), this._config.interval);
+      let intervalTime = this._config.interval;
+      if (useOffset && this._config.intervalOffset !== null) {
+        intervalTime = this._config.intervalOffset;
+      }
+      this._interval = setInterval(() => this.nextWhenVisible(), intervalTime);
     }
     _maybeEnableCycle() {
       if (!this._config.ride) {
@@ -1246,8 +1257,12 @@
         EventHandler.on(this._element, EVENT_KEYDOWN$1, event => this._keydown(event));
       }
       if (this._config.pause === 'hover') {
-        EventHandler.on(this._element, EVENT_MOUSEENTER$1, () => this.pause());
-        EventHandler.on(this._element, EVENT_MOUSELEAVE$1, () => this._maybeEnableCycle());
+        EventHandler.on(this._element, EVENT_MOUSEENTER$1, () => {
+          this._isHovered = true;
+        });
+        EventHandler.on(this._element, EVENT_MOUSELEAVE$1, () => {
+          this._isHovered = false;
+        });
       }
       if (this._config.touch && Swipe.isSupported()) {
         this._addTouchEventListeners();
@@ -1362,10 +1377,32 @@
         activeElement.classList.remove(CLASS_NAME_ACTIVE$2, orderClassName, directionalClassName);
         this._isSliding = false;
         triggerEvent(EVENT_SLID);
+
+        // Preload lazy images in the next slide
+        const upcomingElement = getNextActiveElement(this._getItems(), nextElement, isNext, this._config.wrap);
+        this._preloadLazyImage(upcomingElement);
       };
       this._queueCallback(completeCallBack, activeElement, this._isAnimated());
       if (isCycling) {
         this.cycle();
+      }
+    }
+    _preloadLazyImage(carouselItem) {
+      if (!carouselItem) {
+        return;
+      }
+      const images = SelectorEngine.find('img[loading="lazy"]', carouselItem);
+      for (const img of images) {
+        // Skip images that are already loaded
+        if (img.complete) {
+          continue;
+        }
+
+        // Reassign src to trigger lazy loading
+        const src = img.getAttribute('src');
+        if (src) {
+          img.src = src;
+        }
       }
     }
     _isAnimated() {
